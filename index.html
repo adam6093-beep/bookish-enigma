@@ -1,318 +1,705 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>BioEngine 3D - The Sump Pump</title>
-    <style>
-        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
-        body { background: #0b0f19; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; height: 100vh; }
-        
-        /* 3D Canvas Viewport */
-        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        /* Top Patient Health HUD */
-        #hud {
-            position: absolute; top: 12px; left: 12px; right: 12px; z-index: 10;
-            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
-            border: 1px solid #334155; border-radius: 12px; padding: 12px 16px;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .hud-row { display: flex; justify-content: space-between; align-items: center; }
-        .vital-tag { font-size: 13px; font-weight: 700; color: #94a3b8; }
-        .vital-val { font-size: 14px; font-weight: 800; color: #38bdf8; }
-        .bar-wrap { width: 100%; height: 10px; background: #1e293b; border-radius: 5px; overflow: hidden; border: 1px solid #475569; }
-        #health-bar { width: 45%; height: 100%; background: #eab308; transition: width 0.3s, background 0.3s; }
-        
-        /* Plain English Teaching Box */
-        #instruction-card {
-            position: absolute; top: 95px; left: 12px; right: 12px; z-index: 10;
-            background: rgba(30, 41, 59, 0.9); border-left: 4px solid #38bdf8;
-            padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.4;
-        }
-        #instruction-card b { color: #38bdf8; }
-        
-        /* Bottom Control Panel & Molecule Tray */
-        #bottom-panel {
-            position: absolute; bottom: 16px; left: 12px; right: 12px; z-index: 10;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .dock-status {
-            background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-radius: 8px;
-            padding: 8px 12px; font-size: 12px; display: flex; justify-content: space-around;
-        }
-        .status-slot { font-weight: bold; }
-        .tray {
-            display: flex; gap: 8px; justify-content: center;
-        }
-        .btn-mol {
-            flex: 1; padding: 12px 6px; border: none; border-radius: 10px;
-            font-size: 13px; font-weight: 800; color: #fff; cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s, opacity 0.2s;
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-        }
-        .btn-mol:active { transform: scale(0.95); }
-        .btn-na { background: #f97316; }   /* Orange for Sodium */
-        .btn-k { background: #a855f7; }    /* Purple for Potassium */
-        .btn-atp { background: #eab308; }  /* Gold for Energy */
-        .btn-mol span { font-size: 10px; font-weight: 500; opacity: 0.85; }
-        
-        /* Floating Feedback Toasts */
-        #toast {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 10px 18px; border-radius: 20px; font-weight: 700; font-size: 14px;
-            pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 20;
-            text-align: center; max-width: 80%;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RESUS: Critical Vector - Advanced A&P Bio-Engine</title>
+<style>
+  :root {
+    --bg-dark: #070a10;
+    --panel-bg: rgba(14, 20, 33, 0.85);
+    --border-line: rgba(56, 189, 248, 0.2);
+    --cyan: #38bdf8;
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --purple: #c084fc;
+    --text-dim: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+  body { background: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; }
+
+  /* TOP TELEMETRY HUD */
+  #telemetry-bar {
+    height: 75px; background: rgba(10, 15, 26, 0.95); border-bottom: 1px solid var(--border-line);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 16px; gap: 10px; z-index: 100;
+  }
+  .vital-group { display: flex; flex-direction: column; align-items: center; min-width: 65px; }
+  .vital-label { font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.5px; }
+  .vital-num { font-size: 26px; font-weight: 900; line-height: 1.1; }
+  .vital-unit { font-size: 9px; color: var(--text-dim); }
+  .c-green { color: var(--green); text-shadow: 0 0 12px rgba(34,197,94,0.4); }
+  .c-red { color: var(--red); text-shadow: 0 0 12px rgba(239,68,68,0.4); }
+  .c-cyan { color: var(--cyan); text-shadow: 0 0 12px rgba(56,189,248,0.4); }
+  .c-amber { color: var(--amber); text-shadow: 0 0 12px rgba(245,158,11,0.4); }
+  .c-purple { color: var(--purple); text-shadow: 0 0 12px rgba(192,132,252,0.4); }
+
+  /* MAIN WORKSPACE */
+  #main-stage { flex: 1; position: relative; display: flex; overflow: hidden; }
+
+  /* WAVEFORM OSCILLOSCOPE */
+  #monitor-panel {
+    flex: 1.2; display: flex; flex-direction: column; border-right: 1px solid var(--border-line); background: #05070c; position: relative;
+  }
+  #ecg-canvas { width: 100%; height: 100%; display: block; }
+  .trace-overlay {
+    position: absolute; top: 8px; left: 12px; font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 1px;
+    display: flex; gap: 15px;
+  }
+
+  /* SYSTEM TABS & INTERACTION VIEW */
+  #control-panel {
+    flex: 1.8; display: flex; flex-direction: column; background: var(--panel-bg); backdrop-filter: blur(10px);
+  }
+  .nav-tabs {
+    display: flex; border-bottom: 1px solid var(--border-line); background: rgba(8, 12, 20, 0.6);
+  }
+  .tab-btn {
+    flex: 1; padding: 12px 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; background: transparent;
+    border: none; color: var(--text-dim); cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: var(--cyan); border-bottom: 2px solid var(--cyan); background: rgba(56,189,248,0.06); }
+
+  .view-container { flex: 1; padding: 16px; overflow-y: auto; display: none; }
+  .view-container.active { display: block; }
+
+  /* CARDS & GRIDS */
+  .system-card {
+    background: rgba(18, 26, 44, 0.7); border: 1px solid var(--border-line); border-radius: 10px;
+    padding: 14px; margin-bottom: 12px; position: relative;
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .card-title { font-size: 12px; font-weight: 800; color: var(--cyan); letter-spacing: 0.5px; }
+  .card-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
+  .badge-danger { background: rgba(239,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
+  .badge-ok { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid var(--green); }
+
+  /* ACTION BUTTONS */
+  .act-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+  .act-btn {
+    background: #1e293b; border: 1px solid #334155; color: #fff; padding: 10px 8px; border-radius: 8px;
+    font-size: 11px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: all 0.15s;
+  }
+  .act-btn:active { transform: scale(0.97); }
+  .act-btn span { font-size: 9px; color: var(--text-dim); font-weight: 400; text-align: center; }
+  .act-btn.primary { background: #0284c7; border-color: #38bdf8; }
+  .act-btn.warn { background: #b45309; border-color: #f59e0b; }
+  .act-btn.danger { background: #b91c1c; border-color: #ef4444; }
+
+  /* CELL REACTOR CANVAS */
+  #cell-canvas { width: 100%; height: 160px; background: #070c16; border-radius: 8px; border: 1px solid #1e293b; margin-top: 8px; }
+
+  /* SLIDERS */
+  .slider-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 12px; }
+  .slider-row input { flex: 1; margin: 0 12px; accent-color: var(--cyan); }
+
+  /* CLINICAL DISPATCH / TOAST */
+  #terminal {
+    position: absolute; bottom: 8px; left: 8px; right: 8px; background: rgba(10, 15, 26, 0.95);
+    border: 1px solid var(--border-line); border-radius: 8px; padding: 8px 12px; font-size: 11px;
+    display: flex; justify-content: space-between; align-items: center; z-index: 90;
+  }
+  #log-text { color: #f8fafc; font-family: monospace; }
+  #audio-toggle {
+    background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim);
+    padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+  }
+  #audio-toggle.on { border-color: var(--green); color: var(--green); }
+
+  /* OVERLAYS */
+  #shock-fx {
+    position: absolute; top:0; left:0; width:100%; height:100%; background: #fff; opacity: 0; pointer-events: none; z-index: 200;
+  }
+</style>
 </head>
 <body>
 
-    <div id="canvas-container"></div>
+<div id="shock-fx"></div>
 
-    <div id="hud">
-        <div class="hud-row">
-            <span class="vital-tag">PATIENT RESTING VOLTAGE</span>
-            <span class="vital-val" id="voltage-display">-50 mV (Danger: Cell Swelling)</span>
-        </div>
-        <div class="bar-wrap">
-            <div id="health-bar"></div>
-        </div>
+<!-- TOP TELEMETRY HUD -->
+<div id="telemetry-bar">
+  <div class="vital-group">
+    <span class="vital-label">ECG / HR</span>
+    <span class="vital-num c-green" id="hud-hr">128</span>
+    <span class="vital-unit">BPM (ST)</span>
+  </div>
+  <div class="vital-group">
+    <span class="vital-label">ART NIBP</span>
+    <span class="vital-num c-red" id="hud-bp">78/42</span>
+    <span class="vital-unit">MAP: 54 mmHg</span>
+  </div>
+  <div class="vital-group">
+    <span class="vital-label">SPO2 %</span>
+    <span class="vital-num c-cyan" id="hud-spo2">86%</span>
+    <span class="vital-unit">FiO2 21%</span>
+  </div>
+  <div class="vital-group">
+    <span class="vital-label">ETCO2</span>
+    <span class="vital-num c-amber" id="hud-etco2">58</span>
+    <span class="vital-unit">mmHg (Acidotic)</span>
+  </div>
+  <div class="vital-group">
+    <span class="vital-label">CELL pH</span>
+    <span class="vital-num c-purple" id="hud-ph">7.16</span>
+    <span class="vital-unit">LACT: 6.4 mM</span>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div id="main-stage">
+  
+  <!-- LEFT: OSCILLOSCOPE MONITOR -->
+  <div id="monitor-panel">
+    <div class="trace-overlay">
+      <span>LEAD II (25mm/s)</span>
+      <span id="rhythm-tag" style="color:var(--amber);">SINUS TACHYCARDIA w/ FREQUENT PVCs</span>
+    </div>
+    <canvas id="ecg-canvas"></canvas>
+  </div>
+
+  <!-- RIGHT: MULTI-SYSTEM CONTROLS -->
+  <div id="control-panel">
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-cell')">Molecular / Cell</button>
+      <button class="tab-btn" onclick="switchTab('tab-vent')">Airway / Vent</button>
+      <button class="tab-btn" onclick="switchTab('tab-cardio')">Hemodynamics</button>
+      <button class="tab-btn" onclick="switchTab('tab-domino')">Patho Engine</button>
     </div>
 
-    <div id="instruction-card">
-        <b>Phase 1:</b> Clear out excess salt! The cell will burst if Sodium stays inside. Dock <b>3 Sodiums (Na⁺)</b> inside the pump.
+    <!-- TAB 1: MOLECULAR / CELLULAR ENERGY -->
+    <div id="tab-cell" class="view-container active">
+      <div class="system-card">
+        <div class="card-header">
+          <span class="card-title">MITOCHONDRIAL MATRIX: ATP & LACTATE SHUNT</span>
+          <span class="card-badge badge-danger" id="mito-status">HYPOXIC STALL</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-dim); line-height:1.4;">
+          Oxygen is insufficient to accept electrons at Complex IV. Pyruvate is being shunted to <b>Lactate</b>, spilling protons into the cytoplasm. Without ATP, <b>Na⁺/K⁺ pumps stall</b> and cells will swell and lyse.
+        </p>
+        <canvas id="cell-canvas"></canvas>
+        <div class="act-grid">
+          <button class="act-btn primary" onclick="injectD50Insulin()">
+            IV Dextrose + Insulin
+            <span>Fuel Glycolysis & Drive K⁺ into cells</span>
+          </button>
+          <button class="act-btn warn" onclick="pushSodiumBicarb()">
+            Sodium Bicarbonate
+            <span>Neutralize circulating H⁺ ions</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div id="toast"></div>
-
-    <div id="bottom-panel">
-        <div class="dock-status">
-            <span class="status-slot" id="slot-na">Sodium: 0 / 3</span>
-            <span class="status-slot" id="slot-k">Potassium: 0 / 2</span>
-            <span class="status-slot" id="slot-atp">Energy: 0 / 1 ATP</span>
+    <!-- TAB 2: VENTILATOR & GAS DYNAMICS -->
+    <div id="tab-vent" class="view-container">
+      <div class="system-card">
+        <div class="card-header">
+          <span class="card-title">ALVEOLAR GAS EXCHANGE & VENTILATION</span>
+          <span class="card-badge badge-danger" id="vent-status">SEVERE HYPERCAPNIA</span>
         </div>
-        <div class="tray">
-            <button class="btn-mol btn-na" onclick="tryDock('Na')">
-                + Na⁺
-                <span>Load Sodium</span>
-            </button>
-            <button class="btn-mol btn-atp" onclick="tryDock('ATP')">
-                ⚡ ATP
-                <span>Pay Energy</span>
-            </button>
-            <button class="btn-mol btn-k" onclick="tryDock('K')">
-                + K⁺
-                <span>Load Potassium</span>
-            </button>
+        <div class="slider-row">
+          <span>FiO₂ (Oxygen %): <b id="lbl-fio2">21%</b></span>
+          <input type="range" id="rng-fio2" min="21" max="100" value="21" oninput="updateVentSettings()">
         </div>
+        <div class="slider-row">
+          <span>Resp Rate (Breaths/min): <b id="lbl-rr">10</b></span>
+          <input type="range" id="rng-rr" min="6" max="36" value="10" oninput="updateVentSettings()">
+        </div>
+        <div class="slider-row">
+          <span>PEEP (Alveolar Pressure): <b id="lbl-peep">5</b> cmH₂O</span>
+          <input type="range" id="rng-peep" min="0" max="18" value="5" oninput="updateVentSettings()">
+        </div>
+        <div class="act-grid">
+          <button class="act-btn primary" onclick="intubatePatient()">
+            Rapid Sequence Intubation
+            <span>Secure definitive airway</span>
+          </button>
+          <button class="act-btn warn" onclick="suctionAirway()">
+            Suction Secretions
+            <span>Lower airway resistance</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Three.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- TAB 3: HEMODYNAMICS & DEFIB -->
+    <div id="tab-cardio" class="view-container">
+      <div class="system-card">
+        <div class="card-header">
+          <span class="card-title">CIRCULATION & RESUSCITATION TACTICS</span>
+          <span class="card-badge badge-danger" id="shock-status">HYPOTENSIVE SHOCK</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-dim); line-height:1.4;">
+          Mean Arterial Pressure (MAP) is insufficient to perfuse renal afferent arterioles. The myocardium is becoming irritable from acidosis and hyperkalemia.
+        </p>
+        <div class="act-grid">
+          <button class="act-btn primary" onclick="pushFluidBolus()">
+            1,000 mL Normal Saline
+            <span>Increase venous return / Preload</span>
+          </button>
+          <button class="act-btn warn" onclick="pushVasopressor()">
+            Norepinephrine Infusion
+            <span>Clamp α-1 arterioles (Raise SVR)</span>
+          </button>
+          <button class="act-btn danger" onclick="fireDefibrillator()">
+            ⚡ Defibrillator (200J)
+            <span>Cardioversion / Shock VFib/VTach</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <script>
-        // --- 1. STATE MACHINE ---
-        let currentPhase = 'LOAD_NA'; // Phases: LOAD_NA, FIRE_ATP, LOAD_K, RESET
-        let dockedNa = 0;
-        let dockedK = 0;
-        let dockedATP = false;
-        let membraneVoltage = -50; // Target is -70 mV
-        let patientHealth = 45;
+    <!-- TAB 4: THE DOMINO EFFECT (PATHO TREE) -->
+    <div id="tab-domino" class="view-container">
+      <div class="system-card">
+        <div class="card-header">
+          <span class="card-title">LIVE MULTI-ORGAN CASCADES</span>
+          <span class="card-badge badge-danger">3 CRITICAL FAULTS</span>
+        </div>
+        <div style="font-size:11px; line-height:1.6; color:#cbd5e1;">
+          <p>🔴 <b>Hypoventilation + ARDS:</b> PaCO₂ trapped at 58 mmHg → Carbonic acid generation exceeds kidney buffer capacity.</p>
+          <p style="margin-top:6px;">🔴 <b>Septic Vasodilation:</b> MAP < 60 mmHg → Renal tubules ischemic → Acute Kidney Injury begins in <b><span id="aki-timer">01:45</span></b>.</p>
+          <p style="margin-top:6px;">🔴 <b>Electrolyte Shunt:</b> Acidosis kicks K⁺ out of skeletal cells → Hyperkalemic peaked T waves and ventricular ectopy active.</p>
+        </div>
+      </div>
+    </div>
 
-        // --- 2. THREE.JS 3D SCENE SETUP ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0e17);
+  </div>
+</div>
 
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 0, 14);
+<!-- BOTTOM ALERT / AUDIO STRIP -->
+<div id="terminal">
+  <span id="log-text">SYSTEM IN CRISIS: Patient in septic shock, metabolic acidosis, and hypoxic failure.</span>
+  <button id="audio-toggle" onclick="toggleAudio()">AUDIO: OFF</button>
+</div>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        container.appendChild(renderer.domElement);
+<script>
+// =========================================================================
+// 1. ADVANCED MATHEMATICAL PHYSIOLOGY ENGINE
+// =========================================================================
+const patient = {
+  // Respiratory / Gases
+  fio2: 0.21,
+  rr: 10,
+  peep: 5,
+  intubated: false,
+  pao2: 55,       // mmHg (Target > 80)
+  paco2: 58,      // mmHg (Target 35-45)
+  spo2: 86,       // %
+  etco2: 58,
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0x38bdf8, 1.2, 50);
-        pointLight.position.set(5, 5, 8);
-        scene.add(pointLight);
+  // Acid-Base Chemistry (Henderson-Hasselbalch)
+  hco3: 16,       // mEq/L (Normal 22-26) - Metabolic depletion
+  ph: 7.16,       // arterial pH (Normal 7.35-7.45)
+  lactate: 6.4,   // mmol/L (Severe shock > 4.0)
 
-        // Membrane Bilayer (Top & Bottom lipid plates)
-        const membraneMat = new THREE.MeshPhongMaterial({ color: 0x1e293b, transparent: true, opacity: 0.7 });
-        const topMembrane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.6, 6), membraneMat);
-        topMembrane.position.y = 1.6;
-        scene.add(topMembrane);
-        const btmMembrane = new THREE.Mesh(new THREE.BoxGeometry(16, 0.6, 6), membraneMat);
-        btmMembrane.position.y = -1.6;
-        scene.add(btmMembrane);
+  // Hemodynamics
+  hr: 128,
+  systolic: 78,
+  diastolic: 42,
+  map: 54,        // mmHg (Target > 65)
+  svr: 650,       // dynes/sec/cm^-5 (Low from septic vasodilation)
+  fluidVolume: 3500, // mL intravascular
+  rhythm: 'ST',   // ST (Sinus Tach), PVC, VT (V-Tach), VF (V-Fib), ASYSTOLE
 
-        // The 3D Pump Protein Complex (Two interlocking gate lobes)
-        const pumpGroup = new THREE.Group();
-        const lobeMat = new THREE.MeshPhongMaterial({ color: 0x0284c7, flatShading: true });
-        
-        const leftLobe = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 4, 16), lobeMat);
-        leftLobe.position.x = -1.3;
-        pumpGroup.add(leftLobe);
+  // Cellular
+  atpRate: 40,    // % of normal (Needs O2)
+  potassium: 5.9, // mEq/L (Hyperkalemia)
+  akiSecs: 105,
+  alive: true
+};
 
-        const rightLobe = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 4, 16), lobeMat);
-        rightLobe.position.x = 1.3;
-        pumpGroup.add(rightLobe);
+// =========================================================================
+// 2. PROCEDURAL WEB AUDIO SYNTHESIZER (Telemetry sounds, Beeps, Shocks)
+// =========================================================================
+let audioCtx = null;
+let soundEnabled = false;
 
-        scene.add(pumpGroup);
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
 
-        // Floating Ion Group for docked visuals
-        const ionGroup = new THREE.Group();
-        scene.add(ionGroup);
+function toggleAudio() {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('audio-toggle');
+  btn.innerText = soundEnabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+  btn.classList.toggle('on', soundEnabled);
+}
 
-        // --- 3. GAMEPLAY & STOICHIOMETRY LOGIC ---
+// Authentic pitch-varying pulse oximeter beep
+function playPulseBeep(sat) {
+  if (!soundEnabled || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  
+  // Frequency dynamically shifts with SpO2: 100% = 880Hz, 80% = 440Hz
+  const freq = 440 + Math.max(0, (sat - 80)) * 22;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  osc.type = 'sine';
 
-        function showToast(msg, bg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.background = bg;
-            toast.style.opacity = 1;
-            setTimeout(() => { toast.style.opacity = 0; }, 2000);
-        }
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
 
-        function updateHUD() {
-            document.getElementById('slot-na').innerText = `Sodium: ${dockedNa} / 3`;
-            document.getElementById('slot-k').innerText = `Potassium: ${dockedK} / 2`;
-            document.getElementById('slot-atp').innerText = `Energy: ${dockedATP ? '1 / 1 Cleaved' : '0 / 1 ATP'}`;
-            
-            document.getElementById('voltage-display').innerText = `${membraneVoltage} mV (${membraneVoltage <= -70 ? 'Healthy Baseline' : 'Danger: Depolarized'})`;
-            
-            const bar = document.getElementById('health-bar');
-            bar.style.width = `${patientHealth}%`;
-            bar.style.background = patientHealth >= 80 ? '#22c55e' : (patientHealth >= 50 ? '#eab308' : '#ef4444');
-        }
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.13);
+}
 
-        function tryDock(type) {
-            if (type === 'Na') {
-                if (currentPhase !== 'LOAD_NA') {
-                    showToast("Wrong step! Sodium can only dock when the pump is open to the inside.", "#ef4444");
-                    return;
-                }
-                if (dockedNa < 3) {
-                    dockedNa++;
-                    spawnIonMesh(0xf97316, -1.0 + (dockedNa * 0.5), -0.8);
-                    if (dockedNa === 3) {
-                        currentPhase = 'FIRE_ATP';
-                        document.getElementById('instruction-card').innerHTML = 
-                            "<b>Phase 2:</b> 3 Sodiums are loaded! Now spend <b>1 ATP token</b> to split off energy and flip the pump open to the outside.";
-                        showToast("Sodium full (3/3)! Needs ATP Energy.", "#3b82f6");
-                    }
-                }
-            } else if (type === 'ATP') {
-                if (currentPhase !== 'FIRE_ATP') {
-                    showToast("The pump will not cleave ATP until all 3 Sodium slots are occupied!", "#ef4444");
-                    return;
-                }
-                dockedATP = true;
-                currentPhase = 'LOAD_K';
-                
-                // Animation: Flip pump conformation
-                animateConformationFlip(() => {
-                    clearIonMeshes();
-                    document.getElementById('instruction-card').innerHTML = 
-                        "<b>Phase 3:</b> The pump opened outside! 3 Sodiums flapped out. Now drag in <b>2 Potassiums (K⁺)</b> to complete the cycle.";
-                    showToast("3 Na⁺ ejected outside! Load 2 K⁺", "#22c55e");
-                });
+function playShockSound() {
+  if (!soundEnabled || !audioCtx) return;
+  // White noise blast + low end thump
+  const bufferSize = audioCtx.sampleRate * 0.4;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.38);
+  noise.connect(gain);
+  gain.connect(audioCtx.destination);
+  noise.start();
+}
 
-            } else if (type === 'K') {
-                if (currentPhase !== 'LOAD_K') {
-                    showToast("Potassium cannot dock from the inside. The pump must be flipped first!", "#ef4444");
-                    return;
-                }
-                if (dockedK < 2) {
-                    dockedK++;
-                    spawnIonMesh(0xa855f7, -0.6 + (dockedK * 0.6), 0.8);
-                    if (dockedK === 2) {
-                        completeCycle();
-                    }
-                }
-            }
-            updateHUD();
-        }
+// =========================================================================
+// 3. OSCILLOSCOPE REAL-TIME ECG ENGINE (Phosphor Persistence)
+// =========================================================================
+const ecgCanvas = document.getElementById('ecg-canvas');
+const ecgCtx = ecgCanvas.getContext('2d');
+let ecgX = 0;
+let lastEcgY = 0;
+let ecgPhase = 0;
 
-        function spawnIonMesh(color, x, y) {
-            const geom = new THREE.SphereGeometry(0.3, 16, 16);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
-            const sphere = new THREE.Mesh(geom, mat);
-            sphere.position.set(x, y, 0);
-            ionGroup.add(sphere);
-        }
+function resizeCanvases() {
+  ecgCanvas.width = ecgCanvas.clientWidth * window.devicePixelRatio;
+  ecgCanvas.height = ecgCanvas.clientHeight * window.devicePixelRatio;
+  ecgCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  lastEcgY = ecgCanvas.clientHeight / 2;
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
 
-        function clearIonMeshes() {
-            while (ionGroup.children.length > 0) {
-                ionGroup.remove(ionGroup.children[0]);
-            }
-        }
+function drawECG() {
+  const w = ecgCanvas.clientWidth;
+  const h = ecgCanvas.clientHeight;
+  const midY = h * 0.45;
 
-        function animateConformationFlip(onDone) {
-            let frame = 0;
-            function flip() {
-                frame++;
-                pumpGroup.rotation.z += 0.08;
-                pumpGroup.scale.x = 1 - Math.sin(frame * 0.1) * 0.3;
-                if (frame < 39) {
-                    requestAnimationFrame(flip);
-                } else {
-                    pumpGroup.rotation.z = Math.PI; // Flipped upside down
-                    pumpGroup.scale.x = 1;
-                    if (onDone) onDone();
-                }
-            }
-            flip();
-        }
+  // Sweep clear head
+  ecgCtx.fillStyle = 'rgba(5, 7, 12, 0.08)';
+  ecgCtx.fillRect(ecgX, 0, 18, h);
 
-        function completeCycle() {
-            showToast("Cycle Complete! Door resets inward.", "#22c55e");
-            
-            // Adjust patient stabilization vitals
-            membraneVoltage = Math.max(-70, membraneVoltage - 10);
-            patientHealth = Math.min(100, patientHealth + 30);
-            
-            setTimeout(() => {
-                // Reset to baseline for next cycle
-                pumpGroup.rotation.z = 0;
-                clearIonMeshes();
-                dockedNa = 0;
-                dockedK = 0;
-                dockedATP = false;
-                currentPhase = 'LOAD_NA';
-                
-                if (membraneVoltage <= -70) {
-                    document.getElementById('instruction-card').innerHTML = 
-                        "<b>Patient Stabilized!</b> Resting membrane potential reached <b>-70 mV</b>. Cell swelling has ceased.";
-                } else {
-                    document.getElementById('instruction-card').innerHTML = 
-                        "<b>Great Job!</b> Voltage improved, but the cell is still depolarized. Run another cycle (3 Na⁺ in) to reach -70 mV.";
-                }
-                updateHUD();
-            }, 1200);
-        }
+  // Generate Lead II ECG Voltage based on rhythm
+  let volt = 0;
+  const beatInterval = (60 / patient.hr) * 60; // frames per beat @ 60fps
+  const beatPos = ecgPhase % beatInterval;
 
-        // --- 4. RENDER / ANIMATION LOOP ---
-        function animate() {
-            requestAnimationFrame(animate);
-            // Subtle idle floating animation for the cell environment
-            const t = Date.now() * 0.001;
-            pumpGroup.position.y = Math.sin(t) * 0.1;
-            renderer.render(scene, camera);
-        }
-        animate();
+  if (patient.rhythm === 'ASYSTOLE') {
+    volt = (Math.random() - 0.5) * 2;
+  } else if (patient.rhythm === 'VF') {
+    volt = Math.sin(ecgPhase * 0.3) * 25 + Math.sin(ecgPhase * 0.7) * 18 + (Math.random() - 0.5) * 8;
+  } else if (patient.rhythm === 'VT') {
+    volt = Math.sin(ecgPhase * 0.4) * 45;
+  } else {
+    // Normal / Sinus Tach with Peaked T-waves from Hyperkalemia
+    if (beatPos < 4) volt = 0;
+    else if (beatPos < 8) volt = -4; // P wave
+    else if (beatPos < 12) volt = 0;
+    else if (beatPos < 14) volt = 6;  // Q
+    else if (beatPos < 17) volt = -75; // R spike
+    else if (beatPos < 20) volt = 22; // S
+    else if (beatPos < 24) volt = 0;
+    else if (beatPos < 34) {
+      // Elevated / Peaked T Wave (Potassium > 5.5)
+      const tAmp = patient.potassium > 5.5 ? -28 : -14;
+      volt = Math.sin(((beatPos - 24) / 10) * Math.PI) * tAmp;
+    }
+  }
 
-        // Responsive handling
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+  const currentY = midY + volt;
 
-        updateHUD();
-    </script>
+  // Draw phosphor beam
+  ecgCtx.beginPath();
+  ecgCtx.strokeStyle = patient.rhythm === 'VF' || patient.rhythm === 'VT' ? '#ef4444' : '#22c55e';
+  ecgCtx.lineWidth = 2.2;
+  ecgCtx.shadowColor = ecgCtx.strokeStyle;
+  ecgCtx.shadowBlur = 8;
+  ecgCtx.moveTo(ecgX, lastEcgY);
+  ecgCtx.lineTo(ecgX + 1.8, currentY);
+  ecgCtx.stroke();
+  ecgCtx.shadowBlur = 0;
+
+  // Pulse beep trigger on R-wave
+  if (beatPos >= 16 && beatPos < 18 && patient.rhythm !== 'ASYSTOLE' && patient.rhythm !== 'VF') {
+    playPulseBeep(patient.spo2);
+  }
+
+  lastEcgY = currentY;
+  ecgX += 1.8;
+  if (ecgX > w) ecgX = 0;
+  ecgPhase++;
+
+  requestAnimationFrame(drawECG);
+}
+requestAnimationFrame(drawECG);
+
+// =========================================================================
+// 4. CELLULAR MATRIX VISUALIZER (Cytoplasm, Mitochondria & ATP sparks)
+// =========================================================================
+const cellCanvas = document.getElementById('cell-canvas');
+const cellCtx = cellCanvas.getContext('2d');
+const particles = [];
+for (let i = 0; i < 30; i++) {
+  particles.push({
+    x: Math.random() * 300, y: Math.random() * 150,
+    vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5,
+    type: Math.random() > 0.5 ? 'ATP' : 'H+'
+  });
+}
+
+function drawCellMatrix() {
+  cellCanvas.width = cellCanvas.clientWidth;
+  cellCanvas.height = cellCanvas.clientHeight;
+  const w = cellCanvas.width;
+  const h = cellCanvas.height;
+
+  cellCtx.fillStyle = '#070c16';
+  cellCtx.fillRect(0, 0, w, h);
+
+  // Draw Mitochondria Oval
+  cellCtx.beginPath();
+  cellCtx.ellipse(w / 2, h / 2, 70, 45, 0, 0, Math.PI * 2);
+  cellCtx.fillStyle = patient.atpRate > 50 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+  cellCtx.fill();
+  cellCtx.lineWidth = 2;
+  cellCtx.strokeStyle = patient.atpRate > 50 ? '#22c55e' : '#ef4444';
+  cellCtx.stroke();
+
+  // Draw Inner Cristae folds
+  cellCtx.beginPath();
+  cellCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+  cellCtx.moveTo(w/2 - 45, h/2 - 15);
+  cellCtx.bezierCurveTo(w/2 - 20, h/2 - 30, w/2 + 20, h/2, w/2 + 45, h/2 - 15);
+  cellCtx.stroke();
+
+  // Floating Ions & Sparks
+  particles.forEach(p => {
+    p.x += p.vx * (patient.atpRate / 50);
+    p.y += p.vy * (patient.atpRate / 50);
+    if (p.x < 0 || p.x > w) p.vx *= -1;
+    if (p.y < 0 || p.y > h) p.vy *= -1;
+
+    cellCtx.beginPath();
+    cellCtx.arc(p.x, p.y, p.type === 'ATP' ? 3 : 2, 0, Math.PI * 2);
+    cellCtx.fillStyle = p.type === 'ATP' ? '#eab308' : '#ef4444';
+    cellCtx.shadowBlur = 6;
+    cellCtx.shadowColor = cellCtx.fillStyle;
+    cellCtx.fill();
+    cellCtx.shadowBlur = 0;
+  });
+
+  cellCtx.fillStyle = '#cbd5e1';
+  cellCtx.font = '10px monospace';
+  cellCtx.fillText(`ATP Flux: ${Math.round(patient.atpRate)}% | H⁺ Protons: ${patient.lactate > 4 ? 'HIGH' : 'NORMAL'}`, 10, 18);
+
+  setTimeout(drawCellMatrix, 33);
+}
+drawCellMatrix();
+
+// =========================================================================
+// 5. MASTER PHYSIOLOGY SIMULATION LOOP (1000ms TICK)
+// =========================================================================
+setInterval(() => {
+  if (!patient.alive) return;
+
+  // 1. Oxygenation Dynamics
+  // Alveolar Gas Equation simplification
+  const targetPaO2 = patient.fio2 * 450 * (patient.peep / 5) * (patient.intubated ? 1.0 : 0.7);
+  patient.pao2 += (targetPaO2 - patient.pao2) * 0.15;
+  patient.spo2 = Math.min(100, Math.max(40, Math.round((patient.pao2 / (patient.pao2 + 30)) * 115)));
+
+  // 2. Ventilation & CO2 Dynamics
+  const targetCO2 = (30 / Math.max(4, patient.rr)) * 38;
+  patient.paco2 += (targetCO2 - patient.paco2) * 0.15;
+  patient.etco2 = Math.round(patient.paco2 * 0.95);
+
+  // 3. True Henderson-Hasselbalch Acid-Base Equilibrium
+  // pH = 6.1 + log10(HCO3 / (0.03 * PaCO2))
+  const denom = Math.max(0.1, 0.03 * patient.paco2);
+  const ratio = Math.max(0.1, patient.hco3 / denom);
+  patient.ph = parseFloat((6.1 + Math.log10(ratio)).toFixed(2));
+
+  // 4. Cellular Respiration & Lactate
+  if (patient.pao2 < 60) {
+    patient.atpRate = Math.max(10, patient.atpRate - 4);
+    patient.lactate = parseFloat((patient.lactate + 0.3).toFixed(1));
+    patient.hco3 = Math.max(6, patient.hco3 - 0.2); // Buffered out
+  } else {
+    patient.atpRate = Math.min(100, patient.atpRate + 5);
+    if (patient.lactate > 1.5) patient.lactate = parseFloat((patient.lactate - 0.2).toFixed(1));
+  }
+
+  // 5. Hemodynamics: Ohm's Law of Circulation (MAP = CO * SVR)
+  const co = (patient.hr * (patient.fluidVolume / 3500) * 0.055);
+  patient.map = Math.round((co * (patient.svr / 80)) * 0.9);
+  patient.systolic = Math.round(patient.map * 1.3);
+  patient.diastolic = Math.round(patient.map * 0.75);
+
+  // Fluid shift from high permeability
+  patient.fluidVolume = Math.max(2000, patient.fluidVolume - 15);
+
+  // 6. Arrhythmia Triggers (Cross-System Collapse)
+  if (patient.ph < 7.05 || patient.potassium > 6.8 || patient.pao2 < 45) {
+    if (patient.rhythm !== 'VF' && patient.rhythm !== 'ASYSTOLE') {
+      patient.rhythm = 'VF';
+      logAlert("CRITICAL ALERT: Myocardial irritability triggered VENTRICULAR FIBRILLATION!");
+    }
+  } else if (patient.potassium > 6.0 || patient.ph < 7.20) {
+    patient.rhythm = 'VT';
+  } else {
+    patient.rhythm = patient.hr > 100 ? 'ST' : 'SR';
+  }
+
+  // If in VFib or Asystole, vitals crash instantly
+  if (patient.rhythm === 'VF') {
+    patient.systolic = Math.max(0, patient.systolic - 18);
+    patient.diastolic = Math.max(0, patient.diastolic - 10);
+    patient.map = Math.max(0, patient.map - 14);
+    patient.spo2 = Math.max(30, patient.spo2 - 6);
+  }
+
+  // 7. AKI Timer Countdown
+  if (patient.map < 65) {
+    patient.akiSecs = Math.max(0, patient.akiSecs - 1);
+    const m = Math.floor(patient.akiSecs / 60);
+    const s = patient.akiSecs % 60;
+    document.getElementById('aki-timer').innerText = `0${m}:${s < 10 ? '0' : ''}${s}`;
+    if (patient.akiSecs === 0) {
+      logAlert("PATHOLOGY HIT: Acute Tubular Necrosis (Renal Failure) is now IRREVERSIBLE.");
+    }
+  }
+
+  // Check Death Condition
+  if (patient.map <= 0 && patient.spo2 <= 30) {
+    patient.alive = false;
+    patient.rhythm = 'ASYSTOLE';
+    logAlert("PATIENT EXPIRED: Multi-Organ Biological Collapse.");
+  }
+
+  updateHUD();
+}, 1000);
+
+// =========================================================================
+// 6. UI & HUD UPDATER
+// =========================================================================
+function updateHUD() {
+  document.getElementById('hud-hr').innerText = patient.rhythm === 'VF' ? '---' : patient.hr;
+  document.getElementById('hud-bp').innerText = `${patient.systolic}/${patient.diastolic}`;
+  document.getElementById('hud-spo2').innerText = `${patient.spo2}%`;
+  document.getElementById('hud-etco2').innerText = patient.etco2;
+  document.getElementById('hud-ph').innerText = patient.ph.toFixed(2);
+
+  // Color alerts
+  document.getElementById('hud-ph').className = `vital-num ${patient.ph < 7.25 ? 'c-red' : (patient.ph < 7.35 ? 'c-amber' : 'c-green')}`;
+  document.getElementById('hud-spo2').className = `vital-num ${patient.spo2 < 90 ? 'c-red' : 'c-cyan')}`;
+  document.getElementById('hud-bp').className = `vital-num ${patient.map < 65 ? 'c-red' : 'c-green')}`;
+
+  document.getElementById('rhythm-tag').innerText = 
+    patient.rhythm === 'VF' ? 'VENTRICULAR FIBRILLATION (SHOCKABLE)' :
+    patient.rhythm === 'VT' ? 'RUNS OF VENTRICULAR TACHYCARDIA' :
+    patient.rhythm === 'ST' ? 'SINUS TACHYCARDIA (COMPENSATORY)' : 'NORMAL SINUS RHYTHM';
+  document.getElementById('rhythm-tag').style.color = patient.rhythm === 'VF' ? 'var(--red)' : 'var(--amber)';
+
+  document.getElementById('mito-status').innerText = patient.atpRate > 60 ? 'OX-PHOS NOMINAL' : 'HYPOXIC SHUNT ACTIVE';
+  document.getElementById('mito-status').className = `card-badge ${patient.atpRate > 60 ? 'badge-ok' : 'badge-danger'}`;
+}
+
+// =========================================================================
+// 7. PLAYER INTERVENTIONS (Tactical Healthcare Actions)
+// =========================================================================
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view-container').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function updateVentSettings() {
+  patient.fio2 = parseInt(document.getElementById('rng-fio2').value) / 100;
+  patient.rr = parseInt(document.getElementById('rng-rr').value);
+  patient.peep = parseInt(document.getElementById('rng-peep').value);
+
+  document.getElementById('lbl-fio2').innerText = `${Math.round(patient.fio2 * 100)}%`;
+  document.getElementById('lbl-rr').innerText = patient.rr;
+  document.getElementById('lbl-peep').innerText = patient.peep;
+}
+
+function intubatePatient() {
+  if (patient.intubated) {
+    logAlert("Airway already secured with endotracheal tube.");
+    return;
+  }
+  patient.intubated = true;
+  document.getElementById('vent-status').innerText = 'MECHANICAL VENT ON';
+  document.getElementById('vent-status').className = 'card-badge badge-ok';
+  logAlert("PROCEDURE SUCCESS: Patient intubated. Alveolar shunt fraction halved.");
+}
+
+function suctionAirway() {
+  patient.peep = Math.min(15, patient.peep + 2);
+  document.getElementById('rng-peep').value = patient.peep;
+  document.getElementById('lbl-peep').innerText = patient.peep;
+  logAlert("INTERVENTION: Mucus plugs cleared; alveolar recruitability boosted.");
+}
+
+function pushFluidBolus() {
+  patient.fluidVolume += 800;
+  patient.map += 12;
+  logAlert("FLUID BOLUS: +800 mL IV Crystalloid. Preload restored; MAP elevating.");
+}
+
+function pushVasopressor() {
+  patient.svr += 350;
+  logAlert("NOREPINEPHRINE INFUSION: α-1 receptor stimulation clamps arterioles; SVR climbing.");
+}
+
+function pushSodiumBicarb() {
+  patient.hco3 += 6;
+  logAlert("BIOCHEM FLUSH: IV NaHCO₃ administered. Titrating circulating H⁺ acid load.");
+}
+
+function injectD50Insulin() {
+  patient.potassium = Math.max(4.2, patient.potassium - 0.9);
+  logAlert("MOLECULAR SHIFT: Insulin drives potassium & glucose into cells via Na⁺/K⁺ ATPase.");
+}
+
+function fireDefibrillator() {
+  playShockSound();
+  const fx = document.getElementById('shock-fx');
+  fx.style.opacity = '0.9';
+  setTimeout(() => { fx.style.opacity = '0'; }, 100);
+
+  if (patient.rhythm === 'VF' || patient.rhythm === 'VT') {
+    patient.rhythm = 'ST';
+    patient.hr = 115;
+    patient.map = Math.max(55, patient.map + 25);
+    logAlert("⚡ DEFIBRILLATION SUCCESS: 200J Biphasic reset SA node pacemaking.");
+  } else {
+    logAlert("WARNING: Inappropriate shock delivered to organized rhythm.");
+  }
+}
+
+function logAlert(text) {
+  document.getElementById('log-text').innerText = text;
+}
+</script>
 </body>
 </html>
